@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Safe Connect | An Easier Way to Connect - Fixed</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--green:#0f3d21;--green-light:#e8f5e9;--danger:#ef4444;--card:#fff;--bg:#f6f7f5;--muted:#6b7280;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);line-height:1.6;}
+header{background:var(--green);color:white;padding:32px 20px;text-align:center;}
+header h1{font-size:32px;letter-spacing:2px;font-weight:800;}
+.container{max-width:1100px;margin:0 auto;padding:32px 20px 100px;}
+.status-wrapper{background:var(--card);border-radius:24px;padding:40px 30px;box-shadow:0 10px 30px rgba(0,0,0,0.06);text-align:center;margin-top:-20px;}
+.status-wrapper .sub{color:var(--muted);margin-bottom:28px;}
+.status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:750px;margin:0 auto;}
+@media(max-width:768px){.status-grid{grid-template-columns:1fr;max-width:350px;}}
+.st-btn{border:none;border-radius:16px;padding:28px 20px;font-size:16px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;transition:0.2s;}
+.st-btn.active{transform:scale(1.05); box-shadow:0 0 0 3px var(--green);}
+.st-btn.safe{background:#dcfce7;color:#166534;border:1.5px solid #bbf7d0;}
+.st-btn.help{background:#fee2e2;color:#991b1b;border:1.5px solid #fecaca;}
+.st-btn.contact{background:#fef3c7;color:#92400e;border:1.5px solid #fde68a;}
+#statusDisplay{margin-top:28px;font-size:22px;font-weight:800;color:var(--green);min-height:30px;}
+#timeDisplay{color:var(--muted);font-size:13px;margin-top:4px;}
+.info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:32px;}
+@media(max-width:900px){.info-grid{grid-template-columns:1fr;}}
+.info-card{background:var(--card);border-radius:20px;padding:24px;box-shadow:0 6px 20px rgba(0,0,0,0.05);display:flex;flex-direction:column;}
+.info-card h3{font-size:18px;font-weight:700;margin-bottom:12px;border-bottom:1px solid #f0f0f0;padding-bottom:12px;}
+.info-card p{color:var(--muted);font-size:14px;margin-bottom:10px;}
+#map{height:220px;border-radius:12px;margin-top:12px;display:none;border:1px solid #eee;background:#e8f5e9;}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.btn{background:var(--green);color:white;border:none;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;}
+.btn.light{background:var(--green-light);color:var(--green);}
+.btn.danger{background:var(--danger);}
+input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e5e7eb;margin-top:8px;font-size:14px;}
+.contact-item{display:flex;justify-content:space-between;align-items:center;background:#f9fafb;padding:10px 12px;border-radius:10px;margin-top:8px;font-size:14px;}
+.sos-bar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:calc(100% - 40px);max-width:700px;background:white;border-radius:16px;padding:12px;display:flex;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,0.15);z-index:999;}
+.sos-bar button{flex:1;padding:16px;border-radius:12px;border:none;font-weight:700;cursor:pointer;}
+footer{background:var(--green);color:white;text-align:center;padding:20px;font-size:13px;margin-top:20px;}
+.hospital-item{background:#f0fdf4;border:1px solid #bbf7d0;padding:10px;border-radius:10px;margin-top:8px;font-size:13px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ SAFE CONNECT</h1>
+  <p>Professional Response System <span id="netBadge" style="background:white;color:#0f3d21;padding:3px 8px;border-radius:12px;font-size:11px;margin-left:8px;">ONLINE</span></p>
+</header>
+<div class="container">
+  <div class="status-wrapper">
+    <h2><B>HOW  ARE YOU ?</B></h2>
+    <p class="sub">Select your safety status — it will be saved and shared instantly</p>
+    <div class="status-grid">
+      <button id="btnSAFE" class="st-btn safe" onclick="setStatus('SAFE','🟢')"><span>🟢</span> I'M SAFE</button>
+      <button id="btnHELP" class="st-btn help" onclick="setStatus('NEED HELP','🚨')"><span>🚨</span> I NEED HELP</button>
+      <button id="btnLOW" class="st-btn contact" onclick="setStatus('LOW SIGNAL','📵')"><span>📵</span> LOW SIGNAL</button>
+    </div>
+    <div id="statusDisplay">No status selected</div>
+    <div id="timeDisplay"></div>
+    <div id="debugLog" style="font-size:11px;color:#999;margin-top:8px;"></div>
+    <div id="autoShare"></div>
+  </div>
+  <div class="info-grid">
+    <div class="info-card">
+      <h3>📍 Live Location</h3>
+      <p id="locStatus">Location not fetched. Required for emergency sharing.</p>
+      <p id="locLink" style="word-break:break-all;font-size:12px;"></p>
+      <div id="map"></div>
+      <div class="btn-row">
+        <button class="btn" onclick="startTracking()">Start Live Tracking</button>
+        <button class="btn light" onclick="stopTracking()">Stop</button>
+        <button class="btn light" onclick="copyLocation()">Copy Link</button>
+      </div>
+    </div>
+    <div class="info-card">
+      <h3>👥 Trusted Contacts</h3>
+      <p>Contacts will receive your SOS broadcast automatically.</p>
+      <div id="contactsList"></div>
+      <input id="cName" placeholder="Name e.g. Amma">
+      <input id="cPhone" placeholder="WhatsApp number e.g. 9198xxxxxx">
+      <div class="btn-row"><button class="btn" onclick="addContact()">+ Add Contact</button><button class="btn light" onclick="clearAllData()">Clear All</button></div>
+    </div>
+    <div class="info-card" style="border:1.5px dashed var(--green);">
+      <h3>📴 Offline Mode</h3>
+      <p id="offlineInfo">Works via SMS without internet.</p>
+      <p>Queue: <b id="offlineQueue">0 messages</b> | <span id="offlineStatus">Checking</span></p>
+      <div class="btn-row">
+        <button class="btn danger" onclick="sendOfflineSMS()">📲 Send OFFLINE SMS</button>
+      </div>
+    </div>
+    <div class="info-card" style="border:1.5px solid #fecaca;">
+      <h3>🏥 Medical Emergency</h3>
+      <p>Find nearby hospitals instantly using your live location.</p>
+      <p id="medicalStatus" style="font-size:12px;color:#991b1b;">Start tracking first, then search.</p>
+      <div id="hospitalList"></div>
+      <div class="btn-row">
+       <a href="tel:108" class="btn light" style="text-decoration:none;display:inline-block;text-align:center;" onclick="
+  if(!/Android|iPhone/i.test(navigator.userAgent)){
+    alert('📞 108 is the emergency number.\n\nLaptops cannot make calls.\nPlease dial 108 from your phone.');
+    return false;
+  }
+  return confirm('🚑 Call 108 Ambulance?');
+">Call 108</a>
+    <button class="btn danger" onclick="findHospitals()">Find Nearby Hospitals</button>
+      </div>
+    </div>
+    <div class="info-card">
+      <h3>🔋 Battery & Safety</h3>
+      <p id="batteryInfo">Checking battery status...</p>
+      <div class="btn-row">
+        <button class="btn" onclick="toggleSaver()" id="saverBtn">Enable Battery Saver</button>
+        <button class="btn danger" onclick="triggerSOS()">SOS Siren</button>
+      </div>
+    </div>
+    <div class="info-card">
+      <h3>📡 Communication</h3>
+      <p>Internet: <b id="netStatus">Checking</b></p>
+      <p>Mode: <b id="signalMode">Normal</b></p>
+      <p>Offline Queue: <span id="offlineQueue2">0 messages</span></p>
+      <p style="margin-top:10px;">Future: Bluetooth P2P • Mesh Networking • Satellite SOS</p>
+    </div>
+  </div>
+</div>
+<div class="sos-bar">
+  <button style="background:#f3f4f6;color:#111;" onclick="shareAll()">📤 SHARE STATUS</button>
+  <button style="background:var(--danger);color:white;" onclick="sosEmergency()">SOS EMERGENCY</button>
+</div>
+<footer>TEAM PENTACODE | SAFE CONNECT  - FIXED</footer>
+<audio id="siren" loop src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"></audio>
+<script>
+// FIX 1: Remove old service workers that block updates
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=>r.unregister());
+  });
+}
+let map=null, marker=null, watchId=null, currentPos=null, isSaver=false;
+const siren=document.getElementById('siren');
+
+window.onload=()=>{
+  console.log('V4 Loaded');
+  document.getElementById('debugLog').innerText = 'V4 Loaded at ' + new Date().toLocaleTimeString() + ' | ' + navigator.userAgent.substring(0,40);
+  initMap();
+  loadStatus();
+  loadContacts();
+  initBattery();
+  initNetwork();
+  loadQueue();
+};
+
+function initMap(){
+  try{
+    if(typeof L !== 'undefined'){
+      map=L.map('map').setView([10.786,76.13], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    }
+  }catch(e){}
+}
+
+function setStatus(code,icon){
+  try{
+    const time=new Date().toLocaleString();
+    const display=`${icon} Status: ${code}`;
+    // UPDATE UI IMMEDIATELY - THIS WAS MISSING
+    document.getElementById('statusDisplay').innerText=display;
+    document.getElementById('statusDisplay').style.color = code==='SAFE' ? '#166534' : code==='NEED HELP' ? '#991b1b' : '#92400e';
+    document.getElementById('timeDisplay').innerText="Last updated: "+time + " (Saved ✅)";
+    
+    // Highlight active button
+    document.querySelectorAll('.st-btn').forEach(b=>b.classList.remove('active'));
+    if(code==='SAFE') document.getElementById('btnSAFE').classList.add('active');
+    if(code==='NEED HELP') document.getElementById('btnHELP').classList.add('active');
+    if(code==='LOW SIGNAL') document.getElementById('btnLOW').classList.add('active');
+
+    // SAVE TO LOCALSTORAGE
+    const obj = {code,icon,time,pos:currentPos};
+    localStorage.setItem('sc_status',JSON.stringify(obj));
+    localStorage.setItem('sc_lastChoice', code + ' at ' + time);
+    
+    console.log('Saved:', obj);
+    document.getElementById('debugLog').innerText = '✅ Choice Saved: ' + code + ' at ' + time;
+    document.getElementById('autoShare').innerHTML=`<div class="btn-row" style="justify-content:center"><button class="btn" onclick="shareAll()">Share on WhatsApp</button></div>`;
+    saveQueue(code,time);
+    if(navigator.vibrate) navigator.vibrate([200,100,200]);
+  }catch(e){
+    alert('Save error: ' + e.message);
+  }
+}
+
+function loadStatus(){
+  try{
+    const raw = localStorage.getItem('sc_status');
+    console.log('Loading raw:', raw);
+    const s=JSON.parse(raw||'null');
+    if(s && s.code){
+      document.getElementById('statusDisplay').innerText=`${s.icon} Status: ${s.code}`;
+      document.getElementById('timeDisplay').innerText="Last: "+s.time + " (Restored from storage)";
+      document.getElementById('debugLog').innerText = '♻️ Restored choice: ' + s.code;
+      if(s.code==='SAFE') document.getElementById('btnSAFE').classList.add('active');
+      if(s.code==='NEED HELP') document.getElementById('btnHELP').classList.add('active');
+      if(s.code==='LOW SIGNAL') document.getElementById('btnLOW').classList.add('active');
+      if(s.pos){ currentPos=s.pos; updateLocUI(s.pos); }
+    } else {
+      document.getElementById('debugLog').innerText = 'No saved choice yet - select one';
+    }
+  }catch(e){
+    document.getElementById('debugLog').innerText = 'Storage error: ' + e.message;
+  }
+}
+
+function startTracking(){
+  const mapEl=document.getElementById('map'); mapEl.style.display='block';
+  if(map) setTimeout(()=>{try{map.invalidateSize();}catch(e){}},400);
+  document.getElementById('locStatus').innerText="📡 Tracking... Allow GPS";
+  if(!navigator.geolocation) return;
+  watchId=navigator.geolocation.watchPosition(p=>{
+    currentPos={lat:p.coords.latitude, lon:p.coords.longitude, accuracy:p.coords.accuracy};
+    updateLocUI(currentPos);
+    // ALSO update saved status with new location
+    try{
+      const s=JSON.parse(localStorage.getItem('sc_status')||'null');
+      if(s){ s.pos=currentPos; localStorage.setItem('sc_status',JSON.stringify(s)); }
+    }catch(e){}
+  }, e=>{ document.getElementById('locStatus').innerText="Error: "+e.message; }, {enableHighAccuracy:true});
+}
+function updateLocUI(p){
+  document.getElementById('locStatus').innerHTML=`✅ Found - Lat ${p.lat.toFixed(5)}, Lon ${p.lon.toFixed(5)} | ±${Math.round(p.accuracy)}m`;
+  const url=`https://maps.google.com/?q=${p.lat},${p.lon}`;
+  document.getElementById('locLink').innerHTML=`<a href="${url}" target="_blank" style="color:#0f3d21;font-weight:600">${url}</a>`;
+  if(map){ try{ map.setView([p.lat,p.lon],16); if(marker) map.removeLayer(marker); marker=L.marker([p.lat,p.lon]).addTo(map).bindPopup("You are here").openPopup(); }catch(e){} }
+}
+function stopTracking(){ if(watchId) navigator.geolocation.clearWatch(watchId); document.getElementById('locStatus').innerText="Tracking stopped"; }
+function copyLocation(){ if(!currentPos) return alert('Start tracking first'); const link=`https://maps.google.com/?q=${currentPos.lat},${currentPos.lon}`; navigator.clipboard.writeText(link).then(()=>alert('Copied!')); }
+function addContact(){
+  const name=document.getElementById('cName').value.trim(), phone=document.getElementById('cPhone').value.trim();
+  if(!name||!phone) return alert('Enter name and phone');
+  let arr=JSON.parse(localStorage.getItem('sc_contacts')||'[]'); arr.push({name,phone}); localStorage.setItem('sc_contacts',JSON.stringify(arr));
+  document.getElementById('cName').value=''; document.getElementById('cPhone').value=''; loadContacts();
+}
+function loadContacts(){
+  let arr=JSON.parse(localStorage.getItem('sc_contacts')||'[]');
+  document.getElementById('contactsList').innerHTML=arr.length? arr.map((c,i)=>`<div class="contact-item"><span>👤 ${c.name} • ${c.phone}</span><button class="btn danger" style="padding:4px 8px" onclick="delContact(${i})">X</button></div>`).join('') : '<p style="font-size:13px;color:#999">No contacts yet</p>';
+}
+function delContact(i){ let arr=JSON.parse(localStorage.getItem('sc_contacts')||'[]'); arr.splice(i,1); localStorage.setItem('sc_contacts',JSON.stringify(arr)); loadContacts(); }
+function clearAllData(){ if(confirm('Clear all saved choices and contacts?')){ localStorage.clear(); location.reload(true); } }
+function shareAll(){
+  const s=JSON.parse(localStorage.getItem('sc_status')||'{"code":"UNKNOWN"}');
+  const loc=currentPos? `https://maps.google.com/?q=${currentPos.lat},${currentPos.lon}` : 'Location not enabled yet';
+  const msg=`🛡️ SAFE CONNECT ALERT\n\nStatus: ${s.code}\nTime: ${s.time||new Date().toLocaleString()}\nLocation: ${loc}\n\nSent via Safe Connect`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+}
+async function initBattery(){
+  try{
+    if('getBattery' in navigator){
+      const b=await navigator.getBattery();
+      const u=()=>{ document.getElementById('batteryInfo').innerText=`🔋 ${Math.round(b.level*100)}% - ${b.charging?'Charging':'On Battery'}`; };
+      u(); b.addEventListener('levelchange',u);
+    }
+  }catch(e){}
+}
+function toggleSaver(){ isSaver=!isSaver; document.body.style.filter=isSaver?'grayscale(0.2) brightness(0.9)':''; document.getElementById('saverBtn').innerText=isSaver?'Disable Saver':'Enable Battery Saver'; document.getElementById('signalMode').innerText=isSaver?'Battery Saver':'Normal'; }
+function triggerSOS(){ try{ if(siren.paused){ siren.play().catch(()=>{}); alert('SOS Activated'); if(navigator.vibrate) navigator.vibrate([1000,500,1000]);} else siren.pause(); }catch(e){} }
+function initNetwork(){
+  const up=()=>{
+    const online=navigator.onLine;
+    document.getElementById('netStatus').innerText=online?'Online ✅':'Offline ⚠️';
+    document.getElementById('netBadge').innerText=online?'ONLINE':'OFFLINE';
+    const off=document.getElementById('offlineStatus'); if(off) off.innerText=online?'Online':'Offline - SMS Ready';
+  };
+  window.addEventListener('online',up); window.addEventListener('offline',up); up();
+}
+function saveQueue(code,time){ let q=JSON.parse(localStorage.getItem('sc_queue')||'[]'); q.push({code,time}); localStorage.setItem('sc_queue',JSON.stringify(q)); loadQueue(); }
+function loadQueue(){
+  let q=JSON.parse(localStorage.getItem('sc_queue')||'[]');
+  const txt=q.length+' messages';
+  const e1=document.getElementById('offlineQueue'); if(e1) e1.innerText=txt;
+  const e2=document.getElementById('offlineQueue2'); if(e2) e2.innerText=txt;
+}
+function sendOfflineSMS(){
+  let contacts=JSON.parse(localStorage.getItem('sc_contacts')||'[]');
+  if(contacts.length===0) return alert('Add trusted contacts first!');
+  const s=JSON.parse(localStorage.getItem('sc_status')||'{"code":"UNKNOWN"}');
+  const loc=currentPos? `https://maps.google.com/?q=${currentPos.lat},${currentPos.lon}` : 'Location not available';
+  const msg=`SAFE CONNECT SOS: ${s.code} at ${s.time||new Date().toLocaleString()} Location: ${loc}`;
+  window.location.href=`sms:${contacts.map(c=>c.phone).join(',')}?body=${encodeURIComponent(msg)}`;
+}
+async function findHospitals(){
+  if(!currentPos) return alert('Start Live Tracking first!');
+  document.getElementById('medicalStatus').innerText='🔍 Searching...';
+  const lat=currentPos.lat, lon=currentPos.lon;
+  const listEl=document.getElementById('hospitalList'); listEl.innerHTML='';
+  try{
+    const query=`[out:json];node[amenity=hospital](around:5000,${lat},${lon});out 10;`;
+    const res=await fetch('https://overpass-api.de/api/interpreter?data='+encodeURIComponent(query));
+    const data=await res.json();
+    if(!data.elements || data.elements.length===0){
+      listEl.innerHTML=`<div class="hospital-item">No hospitals in 5km.<br><a href="https://www.google.com/maps/search/hospital/@${lat},${lon},14z" target="_blank">👉 Open Google Maps</a></div>`;
+    } else {
+      listEl.innerHTML=data.elements.slice(0,5).map(h=>{
+        const name=(h.tags&&h.tags.name)?h.tags.name:'Hospital';
+        const dist=calcDist(lat,lon,h.lat,h.lon).toFixed(1);
+        return `<div class="hospital-item"><b>🏥 ${name}</b><br>📏 ${dist} km<br><a href="https://www.google.com/maps/dir/${lat},${lon}/${h.lat},${h.lon}" target="_blank">🧭 Directions</a> | <a href="tel:108">📞 Call 108</a></div>`;
+      }).join('');
+      document.getElementById('medicalStatus').innerText=`✅ Found ${data.elements.length} hospitals`;
+    }
+  }catch(e){ listEl.innerHTML=`<div class="hospital-item"><a href="https://www.google.com/maps/search/hospital/@${lat},${lon},14z" target="_blank">Open Google Maps</a></div>`; }
+}
+function calcDist(lat1,lon1,lat2,lon2){ const R=6371; const dLat=(lat2-lat1)*Math.PI/180; const dLon=(lon2-lon1)*Math.PI/180; const a=Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2; return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
+function sosEmergency(){
+  setStatus('NEED HELP','🚨');
+  try{ if(siren.paused) siren.play().catch(()=>{}); }catch(e){}
+  if(navigator.vibrate) navigator.vibrate([500,200,500,200,1000]);
+  setTimeout(()=>{ if(confirm('🚨 SOS ACTIVATED! Share location now?')) shareAll(); }, 500);
+}
+</script>
+</body>
+</html>
